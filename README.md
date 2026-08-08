@@ -17,7 +17,7 @@
 
 ## 📸 스크린샷
 
-> TODO: 스크린샷 추가 예정
+![App Uninstaller 메인 화면](screenshots/main.png)
 
 ---
 
