@@ -16,7 +16,9 @@
 		AA000007 /* AppScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100007; };
 		AA000008 /* FileSearcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100008; };
 		AA000009 /* AppManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100009; };
+		AA00000B /* AppDescriptionFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000D; };
 		AA00000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA10000A; };
+		AA00000C /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = AA10000E; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,9 +31,11 @@
 		AA100007 /* AppScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppScanner.swift; sourceTree = "<group>"; };
 		AA100008 /* FileSearcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearcher.swift; sourceTree = "<group>"; };
 		AA100009 /* AppManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppManager.swift; sourceTree = "<group>"; };
+		AA10000D /* AppDescriptionFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDescriptionFetcher.swift; sourceTree = "<group>"; };
 		AA10000A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA10000B /* AppUninstaller.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AppUninstaller.entitlements; sourceTree = "<group>"; };
 		AA10000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA10000E /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
 		AA200001 /* AppUninstaller.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppUninstaller.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -64,6 +68,7 @@
 				AA10000A /* Assets.xcassets */,
 				AA10000B /* AppUninstaller.entitlements */,
 				AA10000C /* Info.plist */,
+				AA10000E /* Secrets.plist */,
 			);
 			path = AppUninstaller;
 			sourceTree = "<group>";
@@ -93,6 +98,7 @@
 				AA100007 /* AppScanner.swift */,
 				AA100008 /* FileSearcher.swift */,
 				AA100009 /* AppManager.swift */,
+				AA10000D /* AppDescriptionFetcher.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -165,6 +171,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA00000A /* Assets.xcassets in Resources */,
+				AA00000C /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -184,6 +191,7 @@
 				AA000007 /* AppScanner.swift in Sources */,
 				AA000008 /* FileSearcher.swift in Sources */,
 				AA000009 /* AppManager.swift in Sources */,
+				AA00000B /* AppDescriptionFetcher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

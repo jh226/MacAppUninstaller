@@ -19,10 +19,17 @@ class AppManager: ObservableObject {
 
     private let scanner = AppScanner()
     private let searcher = FileSearcher()
+    private let descriptionFetcher = AppDescriptionFetcher()
     private let fileManager = FileManager.default
     private let sizeQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 8
+        queue.qualityOfService = .utility
+        return queue
+    }()
+    private let descQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 4
         queue.qualityOfService = .utility
         return queue
     }()
@@ -58,6 +65,7 @@ class AppManager: ObservableObject {
                 self.installedApps = apps
                 self.isScanning = false
                 self.calculateSizesAsync()
+                self.fetchDescriptionsAsync()
             }
         }
     }
@@ -73,6 +81,24 @@ class AppManager: ObservableObject {
                           self.installedApps[index].path == path else { return }
                     self.installedApps[index].size = size
                     self.installedApps[index].isSizeCalculated = true
+                }
+            }
+        }
+    }
+
+    private func fetchDescriptionsAsync() {
+        let fetcher = self.descriptionFetcher
+        for index in installedApps.indices {
+            let bundleId = installedApps[index].bundleIdentifier
+            let name = installedApps[index].name
+            let path = installedApps[index].path
+            descQueue.addOperation { [weak self] in
+                let desc = fetcher.fetchDescription(bundleId: bundleId, appName: name, appPath: path)
+                DispatchQueue.main.async {
+                    guard let self = self, index < self.installedApps.count,
+                          self.installedApps[index].bundleIdentifier == bundleId else { return }
+                    self.installedApps[index].appDescription = desc
+                    self.installedApps[index].isDescriptionLoaded = true
                 }
             }
         }
@@ -127,78 +153,58 @@ class AppManager: ObservableObject {
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            var errors: [String] = []
-            var successCount = 0
 
-            // 관련 파일 삭제
+            // 1단계: 삭제 가능 여부 사전 체크
+            var undeletable: [String] = []
             let selectedFiles = self.relatedFiles.filter(\.isSelected)
+
             for file in selectedFiles {
-                let url = URL(fileURLWithPath: file.path)
-                guard self.fileManager.fileExists(atPath: file.path) else {
-                    successCount += 1
-                    continue
-                }
-                if self.fileManager.isDeletableFile(atPath: file.path) {
-                    do {
-                        try self.fileManager.trashItem(at: url, resultingItemURL: nil)
-                        successCount += 1
-                    } catch {
-                        // 휴지통 실패 시 직접 삭제 시도
-                        do {
-                            try self.fileManager.removeItem(at: url)
-                            successCount += 1
-                        } catch {
-                            errors.append("\(file.path)")
-                        }
-                    }
-                } else {
-                    // 권한 없는 파일은 AppleScript로 관리자 권한 삭제 시도
-                    if self.deleteWithPrivilege(path: file.path) {
-                        successCount += 1
-                    } else {
-                        errors.append("\(file.path)")
-                    }
+                guard self.fileManager.fileExists(atPath: file.path) else { continue }
+                if !self.fileManager.isDeletableFile(atPath: file.path) {
+                    undeletable.append(file.path)
                 }
             }
 
-            // 앱 번들 삭제
+            if includeApp && self.fileManager.fileExists(atPath: app.path) {
+                if !self.fileManager.isDeletableFile(atPath: app.path) {
+                    undeletable.append(app.path)
+                }
+            }
+
+            if !undeletable.isEmpty {
+                DispatchQueue.main.async {
+                    self.deleteError = "다음 파일에 대한 권한이 없어 삭제할 수 없습니다:\n\(undeletable.joined(separator: "\n"))\n\n시스템 설정 > 개인정보 보호 > 전체 디스크 접근 권한에 AppUninstaller를 추가해주세요."
+                }
+                return
+            }
+
+            // 2단계: 전부 삭제 가능 → 삭제 실행
+            for file in selectedFiles {
+                let url = URL(fileURLWithPath: file.path)
+                guard self.fileManager.fileExists(atPath: file.path) else { continue }
+                do {
+                    try self.fileManager.trashItem(at: url, resultingItemURL: nil)
+                } catch {
+                    try? self.fileManager.removeItem(at: url)
+                }
+            }
+
             if includeApp {
                 let appUrl = URL(fileURLWithPath: app.path)
                 if self.fileManager.fileExists(atPath: app.path) {
                     do {
                         try self.fileManager.trashItem(at: appUrl, resultingItemURL: nil)
-                        successCount += 1
                     } catch {
-                        do {
-                            try self.fileManager.removeItem(at: appUrl)
-                            successCount += 1
-                        } catch {
-                            if self.deleteWithPrivilege(path: app.path) {
-                                successCount += 1
-                            } else {
-                                errors.append("\(app.path)")
-                            }
-                        }
+                        try? self.fileManager.removeItem(at: appUrl)
                     }
-                } else {
-                    successCount += 1
                 }
             }
 
             DispatchQueue.main.async {
-                if errors.isEmpty {
-                    self.deleteComplete = true
-                    self.installedApps.removeAll { $0.bundleIdentifier == app.bundleIdentifier }
-                    self.selectedAppId = nil
-                    self.relatedFiles = []
-                } else if successCount > 0 {
-                    self.deleteError = "일부 파일 삭제 실패 (\(errors.count)개):\n\(errors.joined(separator: "\n"))\n\n나머지 \(successCount)개 파일은 삭제되었습니다."
-                    self.installedApps.removeAll { $0.bundleIdentifier == app.bundleIdentifier }
-                    self.selectedAppId = nil
-                    self.relatedFiles = []
-                } else {
-                    self.deleteError = "삭제 실패:\n\(errors.joined(separator: "\n"))\n\n시스템 환경설정 > 개인정보 보호 > 전체 디스크 접근 권한에 AppUninstaller를 추가해주세요."
-                }
+                self.deleteComplete = true
+                self.installedApps.removeAll { $0.bundleIdentifier == app.bundleIdentifier }
+                self.selectedAppId = nil
+                self.relatedFiles = []
             }
         }
     }

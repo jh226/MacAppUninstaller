@@ -73,9 +73,17 @@ struct AppRowView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(app.name)
-                    .font(.system(size: 13, weight: .medium))
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(app.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(1)
+                    if let desc = app.appDescription {
+                        Text(desc)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
                 if app.isSizeCalculated {
                     Text(app.formattedSize)
                         .font(.system(size: 11))

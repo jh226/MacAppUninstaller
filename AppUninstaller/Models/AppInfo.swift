@@ -9,6 +9,8 @@ struct AppInfo: Identifiable, Hashable {
     let icon: NSImage?
     var size: Int64
     var isSizeCalculated: Bool = false
+    var appDescription: String?
+    var isDescriptionLoaded: Bool = false
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
@@ -19,6 +21,6 @@ struct AppInfo: Identifiable, Hashable {
     }
 
     static func == (lhs: AppInfo, rhs: AppInfo) -> Bool {
-        lhs.id == rhs.id && lhs.size == rhs.size && lhs.isSizeCalculated == rhs.isSizeCalculated
+        lhs.id == rhs.id && lhs.size == rhs.size && lhs.isSizeCalculated == rhs.isSizeCalculated && lhs.appDescription == rhs.appDescription && lhs.isDescriptionLoaded == rhs.isDescriptionLoaded
     }
 }
