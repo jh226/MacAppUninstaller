@@ -1,0 +1,58 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# Xcode private settings
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Build products
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.app
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Provisioning profiles & signing
+*.mobileprovision
+*.provisionprofile
+
+# Certificates
+*.p12
+*.cer
+*.key
+*.pem
+
+# Archives
+*.xcarchive
+
+# Crash logs
+*.crash
+
+# Playground
+timeline.xctimeline
+playground.xcworkspace
+
+# Secrets / env
+.env
+*.secret
