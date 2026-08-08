@@ -30,11 +30,6 @@ struct DetailView: View {
                     FileListView()
                 }
 
-                Divider()
-
-                // 삭제 버튼 영역
-                DeleteActionView()
-
             } else {
                 // 앱 미선택 상태
                 Spacer()
@@ -56,6 +51,8 @@ struct DetailView: View {
 
 struct AppHeaderView: View {
     let app: AppInfo
+    @EnvironmentObject var appManager: AppManager
+    @State private var includeApp = true
 
     var body: some View {
         HStack(spacing: 14) {
@@ -72,11 +69,38 @@ struct AppHeaderView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .textSelection(.enabled)
-                Text("앱 크기: \(app.formattedSize)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if app.isSizeCalculated {
+                    Text("앱 크기: \(app.formattedSize)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("크기 계산 중...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             Spacer()
+
+            if !appManager.isSearching {
+                Button(action: {
+                    appManager.showDeleteConfirmation = true
+                }) {
+                    Label("삭제", systemImage: "trash")
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.red))
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $appManager.showDeleteConfirmation) {
+                    DeleteConfirmationSheet(includeApp: includeApp)
+                        .environmentObject(appManager)
+                }
+            }
         }
         .padding(16)
     }
@@ -84,6 +108,10 @@ struct AppHeaderView: View {
 
 struct FileListView: View {
     @EnvironmentObject var appManager: AppManager
+
+    var allSelected: Bool {
+        !appManager.relatedFiles.isEmpty && appManager.relatedFiles.allSatisfy(\.isSelected)
+    }
 
     var groupedFiles: [(FileCategory, [Int])] {
         var groups: [FileCategory: [Int]] = [:]
@@ -103,14 +131,15 @@ struct FileListView: View {
                 Text("관련 파일 \(appManager.relatedFiles.count)개")
                     .font(.headline)
                 Spacer()
-                Button("전체 선택") { appManager.selectAllFiles() }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
-                Text("·")
-                    .foregroundColor(.secondary)
-                Button("전체 해제") { appManager.deselectAllFiles() }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.accentColor)
+                Button(allSelected ? "전체 해제" : "전체 선택") {
+                    if allSelected {
+                        appManager.deselectAllFiles()
+                    } else {
+                        appManager.selectAllFiles()
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.accentColor)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -199,48 +228,78 @@ struct FileRowView: View {
     }
 }
 
-struct DeleteActionView: View {
+
+struct DeleteConfirmationSheet: View {
     @EnvironmentObject var appManager: AppManager
-    @State private var includeApp = true
+    let includeApp: Bool
 
     var body: some View {
-        HStack {
-            Toggle("앱 번들도 삭제", isOn: $includeApp)
-                .toggleStyle(.checkbox)
+        VStack(spacing: 20) {
+            if let app = appManager.selectedApp {
+                // 앱 아이콘 + 이름
+                if let icon = app.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                }
 
-            Spacer()
+                Text("「\(app.name)」을(를) 삭제하시겠습니까?")
+                    .font(.headline)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("선택된 파일 크기")
+                // 삭제 요약
+                VStack(spacing: 6) {
+                    if includeApp {
+                        HStack {
+                            Image(systemName: "app.fill")
+                                .foregroundColor(.secondary)
+                            Text("앱 번들")
+                            Spacer()
+                            Text(app.formattedSize)
+                                .foregroundColor(.secondary)
+                        }
+                        .font(.system(size: 12))
+                    }
+                    HStack {
+                        Image(systemName: "doc.on.doc")
+                            .foregroundColor(.secondary)
+                        Text("관련 파일 \(appManager.relatedFiles.filter(\.isSelected).count)개")
+                        Spacer()
+                        Text(appManager.totalSelectedSizeFormatted)
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.system(size: 12))
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+
+                Text("선택된 파일이 휴지통으로 이동됩니다.\n휴지통에서 복구할 수 있습니다.")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text(appManager.totalSelectedSizeFormatted)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
             }
 
-            Button(action: {
-                appManager.showDeleteConfirmation = true
-            }) {
-                Label("삭제", systemImage: "trash")
-                    .foregroundColor(.white)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-            .disabled(appManager.relatedFiles.filter(\.isSelected).isEmpty && !includeApp)
-            .confirmationDialog(
-                "정말 삭제하시겠습니까?",
-                isPresented: $appManager.showDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("휴지통으로 이동", role: .destructive) {
-                    appManager.deleteSelectedFiles(includeApp: includeApp)
+            // 버튼
+            HStack(spacing: 12) {
+                Button("취소") {
+                    appManager.showDeleteConfirmation = false
                 }
-                Button("취소", role: .cancel) {}
-            } message: {
-                Text("선택된 파일이 휴지통으로 이동됩니다.\n휴지통에서 복구할 수 있습니다.")
+                .keyboardShortcut(.cancelAction)
+
+                Button(action: {
+                    appManager.showDeleteConfirmation = false
+                    appManager.deleteSelectedFiles(includeApp: includeApp)
+                }) {
+                    Text("휴지통으로 이동")
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.red))
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(16)
+        .padding(24)
+        .frame(width: 360)
     }
 }

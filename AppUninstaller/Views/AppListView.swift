@@ -76,9 +76,19 @@ struct AppRowView: View {
                 Text(app.name)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
-                Text(app.formattedSize)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                if app.isSizeCalculated {
+                    Text(app.formattedSize)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                } else {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("계산 중...")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         }
         .padding(.vertical, 4)
