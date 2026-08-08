@@ -60,3 +60,7 @@ Secrets.plist
 
 # Claude docs
 claude-docs/
+CLAUDE.md
+
+# Scripts
+run.sh
