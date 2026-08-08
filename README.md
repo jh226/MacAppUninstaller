@@ -17,7 +17,9 @@
 
 ## 📸 스크린샷
 
-![App Uninstaller 메인 화면](screenshots/main.png)
+| 메인 화면 | 삭제 확인 |
+|:---:|:---:|
+| ![메인 화면](screenshots/main.png) | ![삭제 확인](screenshots/delete.png) |
 
 ---
 
