@@ -44,10 +44,14 @@ class FileSearcher {
             }
         }
 
-        // mdfind(Spotlight)로 추가 파일 검색
+        // mdfind(Spotlight)로 추가 파일 검색 (허용 경로 내만)
         let spotlightFiles = searchWithSpotlight(bundleId: bundleId)
         for path in spotlightFiles {
-            if !files.contains(where: { $0.path == path }) && path != app.path {
+            let resolved = (path as NSString).resolvingSymlinksInPath
+            let isAllowed = resolved.hasPrefix("\(homeDir)/Library/") ||
+                            resolved.hasPrefix("/Applications/") ||
+                            resolved.hasPrefix("\(homeDir)/Applications/")
+            if isAllowed && !files.contains(where: { $0.path == path }) && path != app.path {
                 let size = getItemSize(at: path)
                 files.append(RelatedFile(path: path, size: size))
             }

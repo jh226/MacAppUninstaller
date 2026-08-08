@@ -146,6 +146,17 @@ class AppManager: ObservableObject {
         }
     }
 
+    private func isAllowedPath(_ path: String) -> Bool {
+        let resolved = (path as NSString).resolvingSymlinksInPath
+        let home = NSHomeDirectory()
+        let allowed = [
+            home + "/Library/",
+            "/Applications/",
+            home + "/Applications/"
+        ]
+        return allowed.contains { resolved.hasPrefix($0) }
+    }
+
     // 선택된 파일 + 앱 삭제 실행
     func deleteSelectedFiles(includeApp: Bool = true) {
         guard let app = selectedApp else { return }
@@ -154,13 +165,13 @@ class AppManager: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            // 1단계: 삭제 가능 여부 사전 체크
+            // 1단계: 경로 검증 + 삭제 가능 여부 사전 체크
             var undeletable: [String] = []
             let selectedFiles = self.relatedFiles.filter(\.isSelected)
 
             for file in selectedFiles {
                 guard self.fileManager.fileExists(atPath: file.path) else { continue }
-                if !self.fileManager.isDeletableFile(atPath: file.path) {
+                if !self.isAllowedPath(file.path) || !self.fileManager.isDeletableFile(atPath: file.path) {
                     undeletable.append(file.path)
                 }
             }
@@ -207,15 +218,5 @@ class AppManager: ObservableObject {
                 self.relatedFiles = []
             }
         }
-    }
-
-    // AppleScript를 통해 관리자 권한으로 파일 삭제
-    private func deleteWithPrivilege(path: String) -> Bool {
-        let escapedPath = path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let script = "do shell script \"rm -rf \\\"\(escapedPath)\\\"\" with administrator privileges"
-        guard let appleScript = NSAppleScript(source: script) else { return false }
-        var error: NSDictionary?
-        appleScript.executeAndReturnError(&error)
-        return error == nil
     }
 }
