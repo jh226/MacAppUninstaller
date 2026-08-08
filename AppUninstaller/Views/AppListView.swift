@@ -22,6 +22,24 @@ struct AppListView: View {
             .padding(10)
             .background(Color(nsColor: .controlBackgroundColor))
 
+            HStack {
+                Toggle("시스템 앱 포함", isOn: $appManager.showSystemApps)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(action: { appManager.scanApps() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+                .disabled(appManager.isScanning)
+                .help("앱 목록 재스캔")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+
             Divider()
 
             // 앱 목록
@@ -77,6 +95,11 @@ struct AppRowView: View {
                     Text(app.name)
                         .font(.system(size: 13, weight: .medium))
                         .lineLimit(1)
+                    if app.isSystemApp {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
                     if let desc = app.appDescription {
                         Text(desc)
                             .font(.system(size: 11))

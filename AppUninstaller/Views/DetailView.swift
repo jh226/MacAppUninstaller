@@ -85,7 +85,11 @@ struct AppHeaderView: View {
             }
             Spacer()
 
-            if !appManager.isSearching {
+            if app.isSystemApp {
+                Label("시스템 앱", systemImage: "lock.fill")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else if !appManager.isSearching {
                 Button(action: {
                     appManager.showDeleteConfirmation = true
                 }) {

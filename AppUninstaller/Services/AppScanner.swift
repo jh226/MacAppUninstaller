@@ -6,23 +6,80 @@ class AppScanner {
 
     func scanInstalledApps() -> [AppInfo] {
         var apps: [AppInfo] = []
+        var seenPaths = Set<String>()
+        var seenBundleIds = Set<String>()
+
         let appDirectories = [
             "/Applications",
             NSHomeDirectory() + "/Applications"
         ]
 
         for directory in appDirectories {
-            guard let contents = try? fileManager.contentsOfDirectory(atPath: directory) else { continue }
+            scanDirectory(directory, apps: &apps, seenPaths: &seenPaths, seenBundleIds: &seenBundleIds)
+        }
 
-            for item in contents where item.hasSuffix(".app") {
-                let appPath = (directory as NSString).appendingPathComponent(item)
-                if let appInfo = getAppInfo(at: appPath) {
-                    apps.append(appInfo)
-                }
+        let spotlightApps = searchAllAppsWithSpotlight()
+        for path in spotlightApps {
+            guard !isNestedApp(path) else { continue }
+            let resolved = (path as NSString).resolvingSymlinksInPath
+            guard !seenPaths.contains(resolved) else { continue }
+            if let appInfo = getAppInfo(at: path) {
+                guard !seenBundleIds.contains(appInfo.bundleIdentifier) else { continue }
+                apps.append(appInfo)
+                seenPaths.insert(resolved)
+                seenBundleIds.insert(appInfo.bundleIdentifier)
             }
         }
 
         return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func isNestedApp(_ path: String) -> Bool {
+        let components = path.components(separatedBy: "/")
+        var appCount = 0
+        for component in components where component.hasSuffix(".app") {
+            appCount += 1
+            if appCount > 1 { return true }
+        }
+        return false
+    }
+
+    private func scanDirectory(_ directory: String, apps: inout [AppInfo], seenPaths: inout Set<String>, seenBundleIds: inout Set<String>) {
+        guard let contents = try? fileManager.contentsOfDirectory(atPath: directory) else { return }
+
+        for item in contents where item.hasSuffix(".app") {
+            let appPath = (directory as NSString).appendingPathComponent(item)
+            let resolved = (appPath as NSString).resolvingSymlinksInPath
+            guard !seenPaths.contains(resolved) else { continue }
+            if let appInfo = getAppInfo(at: appPath) {
+                guard !seenBundleIds.contains(appInfo.bundleIdentifier) else { continue }
+                apps.append(appInfo)
+                seenPaths.insert(resolved)
+                seenBundleIds.insert(appInfo.bundleIdentifier)
+            }
+        }
+    }
+
+    private func searchAllAppsWithSpotlight() -> [String] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
+        process.arguments = ["kMDItemContentType == 'com.apple.application-bundle'"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                return output.components(separatedBy: "\n").filter { !$0.isEmpty }
+            }
+        } catch {}
+
+        return []
     }
 
     func getAppInfo(at path: String) -> AppInfo? {
@@ -40,12 +97,15 @@ class AppScanner {
 
         let icon = NSWorkspace.shared.icon(forFile: path)
 
+        let isSystemApp = path.hasPrefix("/System/") || path.hasPrefix("/Library/")
+
         return AppInfo(
             name: name,
             bundleIdentifier: bundleId,
             path: path,
             icon: icon,
-            size: 0
+            size: 0,
+            isSystemApp: isSystemApp
         )
     }
 

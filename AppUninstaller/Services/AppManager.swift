@@ -13,6 +13,7 @@ class AppManager: ObservableObject {
     @Published var isScanning = false
     @Published var isSearching = false
     @Published var searchText = ""
+    @Published var showSystemApps = false
     @Published var showDeleteConfirmation = false
     @Published var deleteComplete = false
     @Published var deleteError: String?
@@ -35,13 +36,17 @@ class AppManager: ObservableObject {
     }()
 
     var filteredApps: [AppInfo] {
-        if searchText.isEmpty {
-            return installedApps
+        var result = installedApps
+        if !showSystemApps {
+            result = result.filter { !$0.isSystemApp }
         }
-        return installedApps.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText) ||
-            $0.bundleIdentifier.localizedCaseInsensitiveContains(searchText)
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.bundleIdentifier.localizedCaseInsensitiveContains(searchText)
+            }
         }
+        return result
     }
 
     var totalSelectedSize: Int64 {
@@ -160,6 +165,10 @@ class AppManager: ObservableObject {
     // 선택된 파일 + 앱 삭제 실행
     func deleteSelectedFiles(includeApp: Bool = true) {
         guard let app = selectedApp else { return }
+        if app.isSystemApp {
+            deleteError = "시스템 앱은 삭제할 수 없습니다."
+            return
+        }
         deleteError = nil
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in

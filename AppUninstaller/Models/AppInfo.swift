@@ -11,6 +11,7 @@ struct AppInfo: Identifiable, Hashable {
     var isSizeCalculated: Bool = false
     var appDescription: String?
     var isDescriptionLoaded: Bool = false
+    var isSystemApp: Bool = false
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
